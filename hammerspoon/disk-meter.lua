@@ -385,15 +385,16 @@ function M.isVisible()
 end
 
 -- 사용자가 숨긴 것으로 기억해 다음 redraw 가 다시 띄우지 않게 한다. overlay-all 도 이 함수를 쓴다.
+-- 페이드 없이 즉시 바꾼다 — 페이드 중에는 isShowing() 이 바뀌지 않아 빠르게 연타하면 상태가 어긋난다.
 function M.hide()
   state.userHidden = true
-  if state.canvas and state.canvas:isShowing() then state.canvas:hide(0.12) end
+  if state.canvas then state.canvas:hide() end
   return M
 end
 
 function M.show()
   state.userHidden = false
-  if state.canvas then state.canvas:show(0.12) else redraw() end
+  if state.canvas then state.canvas:show() else redraw() end
   return M
 end
 
