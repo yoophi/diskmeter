@@ -52,6 +52,25 @@ Agent Cockpit 아래 → Agent Shortcuts 아래 → 주 화면 우상단 순으�
 숨겨져 있습니다. 각 패널은 `isVisible` · `hide`/`hideOverlay` · `show`/`showOverlay` 를 제공해야 하며,
 `package.loaded` 에 없는 모듈은 건너뜁니다.
 
+## 겹치지 않게 쌓기
+
+`hammerspoon/overlay-layout.lua` 를 `~/.hammerspoon/` 에 두고 패널 모듈들을 시작한 뒤
+`require("overlay-layout").start()` 를 부릅니다. 각 패널은 `start()` 에서 자신을 등록하고, 그릴 때
+`slot(name, h)` 로 자리를 묻고, 그린 뒤 `schedule()` 로 높이나 표시 여부가 바뀌었음을 알립니다.
+
+- 보이는 패널을 `order` 순서(Shortcuts → Cockpit → Agent Meter → Disk Meter)로 주 화면 우상단부터
+  세로로 쌓습니다. Cockpit 세션이 늘어 높이가 바뀌면 아래 패널이 따라 내려갑니다.
+- 한 열이 화면 아래를 넘으면 왼쪽으로 한 열 옮겨 이어 쌓습니다.
+- 헤더를 드래그해 놓은 패널은 **고정**됩니다. 고정 패널은 스택에서 빠져 장애물이 되고, 스택은 그 아래로
+  비켜 갑니다. `hyper+shift+h` 또는 `hammerspoon://overlays-arrange` 는 모든 고정을 풀고 스택으로 되돌립니다.
+- 재배치는 캔버스 좌표만 옮기고 패널의 `redraw` 를 부르지 않습니다. 같은 틱의 여러 `schedule()` 은
+  한 번의 `apply()` 로 합쳐집니다. 모니터 구성이 바뀌어도 다시 배치합니다.
+- 관리자가 없으면 각 패널은 예전처럼 위 패널의 `frame()` 아래를 스스로 찾습니다. 그래서
+  `disk-meter.lua` 만 설치해도 동작합니다.
+
+등록 명세는 파일 머리말에 있습니다. `overlaps()` 는 지금 보이는 패널 중 겹치는 쌍을 돌려주므로
+검증에 씁니다.
+
 ## 서버가 없을 때
 
 `diskmeter web --port 9998` 에 접속할 수 없으면 명령을 보여 주고, 클릭하면 복사하거나
