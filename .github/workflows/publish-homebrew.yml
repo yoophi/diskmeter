@@ -1,0 +1,83 @@
+name: Publish Homebrew formula
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: macos-latest
+    steps:
+      - name: Check out the released source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Validate the release version
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          package_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)"
+          test "$package_version" = "$RELEASE_VERSION"
+
+      - name: Calculate the source archive checksum
+        id: archive
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          archive_url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${RELEASE_VERSION}.tar.gz"
+          curl --retry 5 --retry-all-errors --fail --silent --show-error --location \
+            "$archive_url" --output diskmeter.tar.gz
+          echo "sha256=$(shasum -a 256 diskmeter.tar.gz | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Update and verify the formula
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
+          SOURCE_SHA256: ${{ steps.archive.outputs.sha256 }}
+        run: |
+          brew tap yoophi/tap
+          formula="$(brew --repository yoophi/tap)/Formula/diskmeter.rb"
+          ruby - "$formula" "$RELEASE_VERSION" "$SOURCE_SHA256" <<'RUBY'
+          path, version, sha256 = ARGV
+          content = File.read(path)
+          updated = content
+            .sub(%r{url "https://github\.com/yoophi/diskmeter/archive/refs/tags/[^\"]+\.tar\.gz"},
+                 "url \"https://github.com/yoophi/diskmeter/archive/refs/tags/#{version}.tar.gz\"")
+            .sub(/sha256 "[0-9a-f]{64}"/, "sha256 \"#{sha256}\"")
+          File.write(path, updated)
+          RUBY
+
+          brew style yoophi/tap/diskmeter
+          brew audit --formula --strict yoophi/tap/diskmeter
+          brew install --build-from-source yoophi/tap/diskmeter
+          brew test yoophi/tap/diskmeter
+
+      - name: Configure the tap deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keyscan github.com >> "$HOME/.ssh/known_hosts"
+
+      - name: Publish the tap formula
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          tap_repository="$(brew --repository yoophi/tap)"
+          git -C "$tap_repository" config user.name "github-actions[bot]"
+          git -C "$tap_repository" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$tap_repository" remote set-url origin git@github.com:yoophi/homebrew-tap.git
+          git -C "$tap_repository" add Formula/diskmeter.rb
+          if git -C "$tap_repository" diff --cached --quiet; then
+            echo "Formula is already current"
+            exit 0
+          fi
+          git -C "$tap_repository" commit -m "diskmeter ${RELEASE_VERSION}"
+          git -C "$tap_repository" push origin main

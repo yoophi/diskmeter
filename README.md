@@ -31,10 +31,14 @@ $ diskmeter
 
 ### 설치
 
+Homebrew tap 으로 설치하고 이후 릴리스도 `brew upgrade` 로 받을 수 있습니다.
+
 ```bash
-cargo install --git https://github.com/yoophi/diskmeter --tag 2026.10.1
+brew install yoophi/tap/diskmeter
+brew upgrade diskmeter
 ```
 
+cargo 로 직접 받으려면 `cargo install --git https://github.com/yoophi/diskmeter --tag 2026.10.1`,
 체크아웃한 작업 트리에서는 `cargo install --path .` 입니다.
 
 ### 명령
@@ -192,6 +196,13 @@ cargo test
 ```
 
 규칙은 [AGENTS.md](AGENTS.md) 를 봅니다.
+
+## 배포
+
+릴리스를 publish 하면 `.github/workflows/publish-homebrew.yml` 이 태그와 같은 버전의 소스
+tarball 체크섬을 계산해 [yoophi/homebrew-tap](https://github.com/yoophi/homebrew-tap) 의
+`Formula/diskmeter.rb` 를 갱신하고 `brew audit` · `brew install` · `brew test` 를 거쳐 푸시합니다.
+tap 저장소에 쓰는 deploy key 는 이 저장소의 `HOMEBREW_TAP_DEPLOY_KEY` secret 입니다.
 
 ## 버전 정책
 
