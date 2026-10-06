@@ -477,7 +477,12 @@ function M.start(overrides)
       order = 4,
       frame = M.frame,
       visible = M.isVisible,
-      place = function(x, y) if state.canvas then state.canvas:topLeft({ x = x, y = y }) end end,
+      place = function(x, y, w)
+        if state.canvas then
+          local f = state.canvas:frame()
+          state.canvas:frame({ x = x, y = y, w = w or f.w, h = f.h })
+        end
+      end,
       pinned = function() return state.pos ~= nil end,
       unpin = function() state.pos = nil; hs.settings.clear(POS_KEY) end,
     })

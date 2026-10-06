@@ -58,10 +58,12 @@ Agent Cockpit 아래 → Agent Shortcuts 아래 → 주 화면 우상단 순으�
 `require("overlay-layout").start()` 를 부릅니다. 각 패널은 `start()` 에서 자신을 등록하고, 그릴 때
 `slot(name, h)` 로 자리를 묻고, 그린 뒤 `schedule()` 로 높이나 표시 여부가 바뀌었음을 알립니다.
 
-- 보이는 패널을 `order` 순서(Shortcuts → Cockpit → Agent Meter → Disk Meter)로 주 화면 우상단부터
-  세로로 쌓습니다. Cockpit 세션이 늘어 높이가 바뀌면 아래 패널이 따라 내려갑니다.
-- 한 열이 화면 아래를 넘으면 왼쪽으로 한 열 옮겨 이어 쌓습니다.
-- 헤더를 드래그해 놓은 패널은 **고정**됩니다. 고정 패널은 스택에서 빠져 장애물이 되고, 스택은 그 아래로
+- 기준점은 주 화면 **우측 하단**입니다. 보이는 패널을 `order` 순서(Shortcuts → Cockpit → Agent Meter →
+  Disk Meter)로 아래에서 위로 쌓습니다. Cockpit 세션이 늘어 높이가 바뀌면 위 패널이 따라 올라갑니다.
+- 폭은 관리자의 `config.width`(기본 `overlay-style` 의 520) 하나로 통일하고, 패널 사이와 열 사이 간격은
+  `config.gap`(기본 12) 하나로 관리합니다. 배치할 때 폭이 다른 패널은 같은 폭으로 맞춥니다.
+- 한 열이 화면 위를 넘으면 왼쪽으로 한 열 옮겨 다시 아래부터 쌓습니다.
+- 헤더를 드래그해 놓은 패널은 **고정**됩니다. 고정 패널은 스택에서 빠져 장애물이 되고, 스택은 그 위로
   비켜 갑니다. `hyper+shift+h` 또는 `hammerspoon://overlays-arrange` 는 모든 고정을 풀고 스택으로 되돌립니다.
 - 재배치는 캔버스 좌표만 옮기고 패널의 `redraw` 를 부르지 않습니다. 같은 틱의 여러 `schedule()` 은
   한 번의 `apply()` 로 합쳐집니다. 모니터 구성이 바뀌어도 다시 배치합니다.
