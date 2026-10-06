@@ -1,0 +1,29 @@
+[package]
+name = "diskmeter"
+version = "2026.10.1"
+edition = "2024"
+description = "디스크 사용량을 5분·1시간·1일 해상도로 기록하고 터미널·웹·Hammerspoon 에서 보여주는 CLI"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = "0.8.9"
+chrono = "0.4.45"
+clap = { version = "4.6.6", features = ["derive"] }
+crossterm = "0.29.0"
+iana-time-zone = "0.1.65"
+libc = "0.2.186"
+ratatui = "0.30.2"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+toml = "1.1.4"
+tokio = { version = "1.53.1", features = ["net", "rt-multi-thread", "signal", "sync", "time"] }
+
+[lib]
+name = "diskmeter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "diskmeter"
+path = "src/bin/diskmeter.rs"

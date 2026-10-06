@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>diskmeter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #1f2a38;
+      --text: #c8c8cc;
+      --muted: #74777b;
+      --faint: #59606a;
+      --normal: #9290d2;
+      --warning: #ae9559;
+      --critical: #bd6974;
+      --accent: #79999a;
+      --good: #7ea6a7;
+      --text-row: 1.45em;
+      --chart-rows: 7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 13.2px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .shell { width: min(1280px, calc(100% - 36px)); margin: 0 auto; padding: 16px 0 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; flex-wrap: wrap; }
+    h1 { margin: 0; font-size: 13.2px; letter-spacing: 0; }
+    .subtitle { color: var(--muted); font-size: 11.44px; }
+    .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    button {
+      border: 0; padding: 2px 0;
+      background: transparent; color: var(--muted); font: inherit; font-size: 10.56px; cursor: pointer;
+    }
+    button::before { content: "["; } button::after { content: "]"; }
+    button:hover { color: var(--text); }
+    button[aria-pressed="true"] { color: var(--text); font-weight: 700; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .ranges { display: flex; gap: 4px; }
+    .status { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10.56px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+    .status-dot.busy { background: var(--warning); animation: pulse 1s infinite; }
+    .status-dot.offline { background: var(--critical); }
+    @keyframes pulse { 50% { opacity: .35; } }
+    #panes { display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr); }
+    #panes[data-pane-count="2"], #panes[data-pane-count="3"], #panes[data-pane-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pane { min-width: 0; }
+    .pane-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .pane-name { font-size: 15.84px; font-weight: 750; overflow-wrap: anywhere; }
+    .origin { color: var(--muted); font-size: 9.68px; text-align: right; white-space: nowrap; }
+    .headline { display: flex; align-items: baseline; gap: 2ch; margin: 6px 0 2px 2ch; }
+    .percent { font-size: 22px; font-weight: 750; }
+    .level { color: var(--muted); font-size: 10.56px; text-transform: uppercase; letter-spacing: .04em; }
+    .pane.warning .percent, .pane.warning .level { color: var(--warning); }
+    .pane.critical .percent, .pane.critical .level { color: var(--critical); }
+    .delta { color: var(--accent); }
+    .bar { position: relative; height: var(--text-row); margin-left: 2ch; overflow: hidden; background: rgba(255, 255, 255, .04); }
+    .bar-fill { height: 100%; background: var(--normal); transition: width .2s steps(8, end); }
+    .warning .bar-fill { background: var(--warning); }
+    .critical .bar-fill { background: var(--critical); }
+    .bar-label { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text); }
+    .detail { margin: 4px 0 10px 2ch; color: var(--muted); }
+    .chart { display: grid; grid-template-columns: 5ch minmax(0, 1fr); grid-template-rows: auto 1.6em; column-gap: 6px; margin-left: 2ch; }
+    .y-axis { position: relative; grid-row: 1; }
+    .y-axis span { position: absolute; right: 0; transform: translateY(-50%); color: var(--muted); font-size: 9.68px; }
+    .plot { position: relative; grid-row: 1; height: calc(var(--text-row) * var(--chart-rows)); }
+    svg.area { display: block; width: 100%; height: 100%; overflow: visible; }
+    .grid-line { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 2 10; vector-effect: non-scaling-stroke; }
+    .midnight-line, .week-line, .month-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; opacity: .75; vector-effect: non-scaling-stroke; }
+    .hour-line, .day-line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; opacity: .4; vector-effect: non-scaling-stroke; }
+    .band-fill { fill: rgba(121, 153, 154, .28); }
+    .area-fill { fill: rgba(121, 153, 154, .55); }
+    .area-line { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .x-axis { position: relative; grid-column: 2; grid-row: 2; }
+    .x-axis span { position: absolute; top: 4px; transform: translateX(-50%); color: var(--muted); font-size: 9.68px; white-space: nowrap; }
+    .hit { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+    .crosshair { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--text); opacity: .6; pointer-events: none; }
+    .hover-dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+    .tooltip {
+      position: absolute; top: 4px; padding: 4px 8px;
+      background: color-mix(in srgb, var(--bg) 85%, black); border: 1px solid var(--faint);
+      color: var(--text); font-size: 10.56px; white-space: nowrap; pointer-events: none;
+      transform: translateX(8px);
+    }
+    .tooltip.flip { transform: translateX(calc(-100% - 8px)); }
+    .empty { margin: 6px 0 0 2ch; color: var(--muted); font-size: 10.56px; }
+    details.table { margin: 8px 0 0 2ch; color: var(--muted); font-size: 10.56px; }
+    details.table summary { cursor: pointer; }
+    details.table table { border-collapse: collapse; margin-top: 6px; color: var(--text); }
+    details.table th, details.table td { text-align: right; padding: 1px 12px 1px 0; font-weight: 400; }
+    details.table th:first-child, details.table td:first-child { text-align: left; }
+    details.table th { color: var(--muted); }
+    .error { margin: 6px 0 0 2ch; color: var(--critical); }
+    footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 24px; color: var(--muted); font-size: 9.68px; }
+    @media (max-width: 760px) {
+      #panes[data-pane-count] { grid-template-columns: minmax(0, 1fr); }
+      .shell { width: min(100% - 20px, 1280px); padding-top: 10px; }
+      header { align-items: flex-start; flex-direction: column; gap: 6px; }
+      .origin { display: none; }
+      footer { flex-direction: column; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>diskmeter</h1>
+        <div class="subtitle" id="subtitle">disk usage · loading</div>
+      </div>
+      <div class="actions">
+        <div class="ranges" id="ranges" role="group" aria-label="History range"></div>
+        <div class="status"><span class="status-dot busy" id="status-dot"></span><span id="status-text">connecting</span></div>
+        <button id="refresh" type="button">Sample now</button>
+      </div>
+    </header>
+    <section id="panes" aria-live="polite">
+      <div class="pane"><div class="empty">Loading disk usage…</div></div>
+    </section>
+    <footer><span id="updated">Waiting for the first sample</span><span>self-hosted · local process</span></footer>
+  </main>
+  <template id="pane-template">
+    <article class="pane">
+      <div class="pane-head"><span class="pane-name"></span><span class="origin"></span></div>
+      <div class="headline"><span class="percent"></span><span class="level"></span><span class="delta"></span></div>
+      <div class="bar"><div class="bar-fill"></div><span class="bar-label"></span></div>
+      <div class="detail"></div>
+      <div class="chart">
+        <div class="y-axis"></div>
+        <div class="plot">
+          <svg class="area" viewBox="0 0 1000 100" preserveAspectRatio="none" role="img" aria-label="Disk usage history">
+            <g class="grid"></g>
+            <g class="markers"></g>
+            <path class="band-fill"></path>
+            <path class="area-fill"></path>
+            <path class="area-line"></path>
+          </svg>
+          <div class="crosshair" hidden></div>
+          <div class="hover-dot" hidden></div>
+          <div class="tooltip" hidden></div>
+          <div class="hit"></div>
+        </div>
+        <div class="x-axis"></div>
+      </div>
+      <div class="empty" hidden></div>
+      <details class="table">
+        <summary>Data table</summary>
+        <table><thead><tr><th>time</th><th>used</th><th>min</th><th>max</th><th>n</th></tr></thead><tbody></tbody></table>
+      </details>
+      <div class="error" hidden></div>
+    </article>
+  </template>
+  <script>
+    const RANGES = ['24h', '7d', '30d', '1y'];
+    const POLL_MS = 5000;
+    const SVG = 'http://www.w3.org/2000/svg';
+    const panes = document.querySelector('#panes');
+    const paneTemplate = document.querySelector('#pane-template');
+    const rangesBox = document.querySelector('#ranges');
+    const statusDot = document.querySelector('#status-dot');
+    const statusText = document.querySelector('#status-text');
+    const refreshButton = document.querySelector('#refresh');
+    let range = readRange();
+
+    // `?range=7d` 로 열면 그 기간으로 시작한다 — 북마크와 Hammerspoon 에서 여는 링크용.
+    function readRange() {
+      const requested = new URLSearchParams(location.search).get('range');
+      if (RANGES.includes(requested)) return requested;
+      try {
+        const saved = localStorage.getItem('diskmeter.range');
+        if (RANGES.includes(saved)) return saved;
+      } catch (error) { /* 저장소가 막혀 있어도 화면은 떠야 한다 */ }
+      return '24h';
+    }
+
+    function formatBytes(bytes) {
+      const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
+      let value = bytes, unit = 0;
+      while (value >= 1000 && unit < units.length - 1) { value /= 1000; unit += 1; }
+      return unit === 0 ? `${bytes} B` : `${value.toFixed(1)} ${units[unit]}`;
+    }
+
+    function formatTime(epoch, resolution) {
+      const date = new Date(epoch * 1000);
+      const day = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      if (resolution === '1d') return day;
+      const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `${day} ${time}`;
+    }
+
+    function renderRanges() {
+      rangesBox.replaceChildren();
+      for (const name of RANGES) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = name;
+        button.setAttribute('aria-pressed', String(name === range));
+        button.addEventListener('click', () => {
+          range = name;
+          try { localStorage.setItem('diskmeter.range', name); } catch (error) { /* 선택은 이번 세션에만 남는다 */ }
+          renderRanges();
+          load();
+        });
+        rangesBox.append(button);
+      }
+    }
+
+    function renderChart(node, chart) {
+      const svg = node.querySelector('svg.area');
+      const grid = svg.querySelector('.grid');
+      const markers = svg.querySelector('.markers');
+      const yAxis = node.querySelector('.y-axis');
+      const xAxis = node.querySelector('.x-axis');
+      grid.replaceChildren(); markers.replaceChildren(); yAxis.replaceChildren(); xAxis.replaceChildren();
+      for (const tick of chart.y_ticks || []) {
+        const line = document.createElementNS(SVG, 'line');
+        line.setAttribute('class', 'grid-line');
+        line.setAttribute('x1', 0); line.setAttribute('x2', 1000);
+        line.setAttribute('y1', tick.y); line.setAttribute('y2', tick.y);
+        grid.append(line);
+        const label = document.createElement('span');
+        label.textContent = tick.label;
+        label.style.top = `${tick.y}%`;
+        yAxis.append(label);
+      }
+      for (const marker of chart.markers || []) {
+        const line = document.createElementNS(SVG, 'line');
+        line.setAttribute('class', `${marker.kind}-line`);
+        line.setAttribute('x1', marker.x); line.setAttribute('x2', marker.x);
+        line.setAttribute('y1', 0); line.setAttribute('y2', 100);
+        markers.append(line);
+        if (marker.label) {
+          const label = document.createElement('span');
+          label.textContent = marker.label;
+          label.style.left = `${marker.x / 10}%`;
+          xAxis.append(label);
+        }
+      }
+      svg.querySelector('.band-fill').setAttribute('d', chart.band_path || '');
+      svg.querySelector('.area-fill').setAttribute('d', chart.area_path || '');
+      svg.querySelector('.area-line').setAttribute('d', chart.line_path || '');
+      attachHover(node, chart);
+      renderTable(node, chart);
+    }
+
+    function attachHover(node, chart) {
+      const plot = node.querySelector('.plot');
+      const hit = node.querySelector('.hit');
+      const crosshair = node.querySelector('.crosshair');
+      const dot = node.querySelector('.hover-dot');
+      const tooltip = node.querySelector('.tooltip');
+      const points = chart.points || [];
+      const hide = () => { crosshair.hidden = true; dot.hidden = true; tooltip.hidden = true; };
+      hide();
+      if (!points.length) { hit.onpointermove = null; hit.onpointerleave = null; return; }
+      hit.onpointermove = event => {
+        const rect = plot.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / Math.max(rect.width, 1) * 1000;
+        let nearest = points[0];
+        for (const point of points) if (Math.abs(point.x - x) < Math.abs(nearest.x - x)) nearest = point;
+        crosshair.style.left = `${nearest.x / 10}%`;
+        dot.style.left = `${nearest.x / 10}%`;
+        dot.style.top = `${nearest.y}%`;
+        const parts = [
+          formatTime(nearest.at, chart.resolution),
+          `${nearest.percent.toFixed(1)}% used`,
+          `${formatBytes(nearest.used)} of ${formatBytes(nearest.total)}`,
+        ];
+        if (nearest.samples > 1) parts.push(`${nearest.percent_min.toFixed(1)}–${nearest.percent_max.toFixed(1)}% · ${nearest.samples} samples`);
+        tooltip.textContent = parts.join(' · ');
+        tooltip.style.left = `${nearest.x / 10}%`;
+        tooltip.classList.toggle('flip', nearest.x > 600);
+        crosshair.hidden = false; dot.hidden = false; tooltip.hidden = false;
+      };
+      hit.onpointerleave = hide;
+    }
+
+    function renderTable(node, chart) {
+      const body = node.querySelector('tbody');
+      body.replaceChildren();
+      for (const point of (chart.points || []).slice().reverse()) {
+        const row = document.createElement('tr');
+        const cells = [
+          formatTime(point.at, chart.resolution),
+          `${point.percent.toFixed(1)}% · ${formatBytes(point.used)}`,
+          `${point.percent_min.toFixed(1)}%`,
+          `${point.percent_max.toFixed(1)}%`,
+          String(point.samples),
+        ];
+        for (const text of cells) {
+          const cell = document.createElement('td');
+          cell.textContent = text;
+          row.append(cell);
+        }
+        body.append(row);
+      }
+    }
+
+    function render(data) {
+      panes.replaceChildren();
+      panes.dataset.paneCount = Math.min(data.panes.length || 1, 4);
+      for (const pane of data.panes) {
+        const node = paneTemplate.content.firstElementChild.cloneNode(true);
+        node.classList.add(pane.level || 'normal');
+        node.querySelector('.pane-name').textContent = pane.display || pane.path;
+        node.querySelector('.origin').textContent = pane.origin || 'waiting for the first sample';
+        const hasSample = typeof pane.used_percent === 'number';
+        node.querySelector('.percent').textContent = hasSample ? `${pane.used_percent.toFixed(1)}%` : '—';
+        node.querySelector('.level').textContent = hasSample ? pane.level : '';
+        node.querySelector('.delta').textContent = pane.delta || '';
+        node.querySelector('.bar-fill').style.width = `${hasSample ? Math.min(100, Math.max(0, pane.used_percent)) : 0}%`;
+        node.querySelector('.bar-label').textContent = pane.label;
+        node.querySelector('.detail').textContent = pane.detail || '';
+        const error = node.querySelector('.error');
+        error.hidden = !pane.error;
+        error.textContent = pane.error || '';
+        const chart = pane.chart || {};
+        renderChart(node, chart);
+        const empty = !(chart.points && chart.points.length);
+        node.querySelector('details.table').hidden = empty;
+        const note = node.querySelector('.empty');
+        note.hidden = !empty;
+        note.textContent = empty ? `No ${data.range} history yet` : '';
+        panes.append(node);
+      }
+      statusDot.className = `status-dot${data.refreshing ? ' busy' : ''}`;
+      statusText.textContent = data.refreshing ? 'sampling' : 'live';
+      document.querySelector('#subtitle').textContent = `disk usage · ${data.range} · ${data.timezone}`;
+      document.querySelector('#updated').textContent = `Rendered ${new Date(data.generated_at).toLocaleTimeString()}${data.next_refresh_at ? ` · next sample ${new Date(data.next_refresh_at).toLocaleTimeString()}` : ''}`;
+      refreshButton.disabled = data.refreshing;
+    }
+
+    async function load() {
+      try {
+        const response = await fetch(`/api/dashboard?range=${encodeURIComponent(range)}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        render(await response.json());
+      } catch (error) {
+        statusDot.className = 'status-dot offline';
+        statusText.textContent = 'disconnected';
+      }
+    }
+
+    async function refresh() {
+      refreshButton.disabled = true;
+      statusDot.className = 'status-dot busy';
+      statusText.textContent = 'sampling';
+      try { await fetch('/api/refresh', { method: 'POST' }); } finally { await load(); }
+    }
+
+    refreshButton.addEventListener('click', refresh);
+    renderRanges();
+    load();
+    setInterval(load, POLL_MS);
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+# Hammerspoon 패널
+
+`hammerspoon/disk-meter.lua` 는 `diskmeter web --port 9998` 의 `/api/dashboard` JSON 을 읽어
+Agent Meter 패널과 같은 오버레이에 볼륨별 소진율과 이력 차트를 그립니다. 같은
+`overlay-style.lua`(폭 · 헤더 · 색 · 드래그)와 `hyper.lua` 를 쓰므로 두 패널은 나란히 붙고
+같은 방식으로 움직입니다.
+
+## 설치
+
+```bash
+cp hammerspoon/disk-meter.lua ~/.hammerspoon/
+```
+
+`~/.hammerspoon/init.lua` 끝에:
+
+```lua
+-- diskmeter 디스크 사용량 패널 (hyper+0 토글, hyper+shift+d 새로고침). 데이터: http://localhost:9998/api/dashboard
+require("disk-meter").start()
+```
+
+Hammerspoon 설정을 다시 읽으면(`hyper+r`) 패널이 뜹니다. 기본 위치는 Agent Meter 아래 →
+Agent Cockpit 아래 → Agent Shortcuts 아래 → 주 화면 우상단 순으로 비어 있는 자리이며, 헤더를
+끌어 옮기면 그 위치를 기억합니다.
+
+## 조작
+
+| 동작 | 방법 |
+|---|---|
+| 표시 / 숨김 | `hyper+0`, `hammerspoon://diskmeter-toggle` |
+| 즉시 새로고침 | `hyper+shift+d`, `hammerspoon://diskmeter-refresh` |
+| 기간 전환 | 헤더의 `24h ▸` 클릭 (24h → 7d → 30d → 1y), `hammerspoon://diskmeter-range?range=7d` |
+| 위치 | 헤더 드래그, `hammerspoon://diskmeter-move?x=100&y=200` (파라미터 없으면 기본 위치) |
+
+고른 기간은 `hs.settings` 에 남아 재시작해도 유지됩니다.
+
+## 서버가 없을 때
+
+`diskmeter web --port 9998` 에 접속할 수 없으면 명령을 보여 주고, 클릭하면 복사하거나
+Terminal 새 창에서 바로 실행합니다. 20초마다 다시 접속을 시도합니다.
+
+## 그리는 것
+
+pane 마다 경로와 `83% used`(심각도 색), 게이지, 차트, `408.3 GB of 494.4 GB · 86.1 GB free`,
+기간과 변화량(`24h  +0.4%p`)을 그립니다. 차트는 서버가 계산한 좌표를 그대로 씁니다.
+
+- `y_ticks` → 가로 격자와 왼쪽 눈금
+- `markers` → 세로 점선. `midnight` · `week` · `month` 는 진하게, `hour` · `day` 는 연하게. 라벨은 아래에
+- `points` → 면과 선. 표본 간격이 버킷 길이의 3배를 넘으면 끊고, 홀로 남은 점은 작은 원으로
+- 버킷 안 최소~최대(`percent_min` · `percent_max`, `samples > 1`)가 있으면 연한 띠
+
+`hs.canvas` 에는 SVG path 요소가 없으므로 `line_path` 대신 `points` 를 `segments` 로 그립니다.
+색은 웹 UI 의 `:root` 팔레트와 같아 두 화면의 색이 같은 뜻을 갖습니다.
+
+## 설정
+
+`require("disk-meter").start({ ... })` 에 넘겨 바꿀 수 있습니다.
+
+| 키 | 기본 | 의미 |
+|---|---|---|
+| `url` | `http://localhost:9998/api/dashboard` | 데이터 주소 (`?range=` 는 패널이 붙입니다) |
+| `startCommand` | `diskmeter web --port 9998` | 오프라인일 때 보여 주고 실행할 명령 |
+| `range` | `24h` | 시작 기간 |
+| `pollSec` | 60 | `next_refresh_at` 을 읽지 못했을 때의 주기 |
+| `retrySec` | 20 | 접속 실패 시 재시도 주기 |
+| `showOnStart` | `true` | 시작할 때 보일지 |
+| `offsetY` | 980 | 다른 패널이 없을 때 주 화면 우상단에서 내려올 거리 |
+| `chartHeight` | 56 | 차트 높이 (px) |
+
+## 디버깅
+
+`M.snapshot(path)` 는 화면 전체가 아니라 패널 캔버스만 PNG 로 저장합니다.
+
+```lua
+require("disk-meter").snapshot(os.getenv("HOME") .. "/Desktop/disk-meter.png")
+```
