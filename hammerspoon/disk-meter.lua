@@ -14,14 +14,15 @@
 --   x 는 기간 시작~지금을 0~1000 으로, y 는 y_max 가 0·y_min 이 100 인 viewBox 좌표다.
 --   hs.canvas 에는 path 요소가 없어 points 를 segments(면·선)로 그린다. 표본 간격이 벌어진 자리는 끊는다.
 --
--- 단축키: hyper+0 표시/숨김, hyper+shift+d 즉시 새로고침, 헤더의 기간 글자 클릭으로 24h→7d→30d→1y 순환
+-- 단축키: hyper+d 표시/숨김, hyper+shift+d 즉시 새로고침, 헤더의 기간 글자 클릭으로 24h→7d→30d→1y 순환
+--        (hyper+0 은 Agent Shortcuts 의 오버레이 토글이라 쓰지 않는다. 모든 패널 숨김은 overlay-all 의 hyper+h)
 -- URL:   hammerspoon://diskmeter-toggle · diskmeter-refresh · diskmeter-range?range=7d · diskmeter-move?x=&y=
 
 local S = require("overlay-style")
 local log = hs.logger.new("disk-meter", "info")
 
 local M = {}
-M.version = "2026-10-06.1"
+M.version = "2026-10-06.2"
 
 M.config = {
   url = "http://localhost:9998/api/dashboard",
@@ -311,13 +312,13 @@ local function redraw()
 
   local hint
   if state.offline then
-    hint = "hyper+0 숨김 · ⇧D 새로고침 · 오프라인"
+    hint = "hyper+d 숨김 · ⇧D 새로고침 · 오프라인"
   elseif state.data then
     local d = state.data
-    hint = string.format("hyper+0 숨김 · ⇧D 새로고침 · %s 갱신%s", hhmm(d.generated_at),
+    hint = string.format("hyper+d 숨김 · ⇧D 새로고침 · %s 갱신%s", hhmm(d.generated_at),
       d.refreshing and " · 표본 중" or (d.next_refresh_at and (" · 다음 " .. hhmm(d.next_refresh_at)) or ""))
   else
-    hint = "hyper+0 숨김 · ⇧D 새로고침 · 불러오는 중"
+    hint = "hyper+d 숨김 · ⇧D 새로고침 · 불러오는 중"
   end
   local all = S.baseElements("Disk Meter", hint)
   -- 제목 옆 기간 글자. 클릭하면 24h → 7d → 30d → 1y 로 바뀐다.
@@ -379,15 +380,25 @@ function M.cycleRange()
   return M.setRange(RANGES[i % #RANGES + 1])
 end
 
+function M.isVisible()
+  return state.canvas ~= nil and state.canvas:isShowing()
+end
+
+-- 사용자가 숨긴 것으로 기억해 다음 redraw 가 다시 띄우지 않게 한다. overlay-all 도 이 함수를 쓴다.
+function M.hide()
+  state.userHidden = true
+  if state.canvas and state.canvas:isShowing() then state.canvas:hide(0.12) end
+  return M
+end
+
+function M.show()
+  state.userHidden = false
+  if state.canvas then state.canvas:show(0.12) else redraw() end
+  return M
+end
+
 function M.toggle()
-  if not state.canvas then redraw() end
-  if state.canvas:isShowing() then
-    state.userHidden = true
-    state.canvas:hide(0.12)
-  else
-    state.userHidden = false
-    state.canvas:show(0.12)
-  end
+  if M.isVisible() then M.hide() else M.show() end
   return M
 end
 
@@ -436,7 +447,7 @@ function M.start(overrides)
 
   local ok, hyper = pcall(require, "hyper")
   if ok and hyper and hyper.hyperMode then
-    hyper.bindKey("0", M.toggle)
+    hyper.bindKey("d", M.toggle)
     hyper.bindShiftKey("d", M.refresh)
   else
     log.w("hyper 모듈 없음: hammerspoon://diskmeter-* URL 만 동작")

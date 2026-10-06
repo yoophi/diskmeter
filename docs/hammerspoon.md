@@ -26,12 +26,31 @@ Agent Cockpit 아래 → Agent Shortcuts 아래 → 주 화면 우상단 순으�
 
 | 동작 | 방법 |
 |---|---|
-| 표시 / 숨김 | `hyper+0`, `hammerspoon://diskmeter-toggle` |
+| 표시 / 숨김 | `hyper+d`, `hammerspoon://diskmeter-toggle` |
 | 즉시 새로고침 | `hyper+shift+d`, `hammerspoon://diskmeter-refresh` |
 | 기간 전환 | 헤더의 `24h ▸` 클릭 (24h → 7d → 30d → 1y), `hammerspoon://diskmeter-range?range=7d` |
 | 위치 | 헤더 드래그, `hammerspoon://diskmeter-move?x=100&y=200` (파라미터 없으면 기본 위치) |
 
 고른 기간은 `hs.settings` 에 남아 재시작해도 유지됩니다.
+
+`hyper+0` 은 Agent Shortcuts 의 오버레이 토글이 이미 쓰고 있어 피했습니다. 새 키를 고를 때는
+`require("hyper").hyperMode.keys` 의 `idx` 목록을 보면 모달에 등록된 키를 전부 알 수 있습니다 —
+`hyper.bindKey` 를 거치지 않고 `hyperMode:bind` 로 직접 거는 모듈도 있기 때문입니다.
+
+## 모든 패널 한 번에 숨기기
+
+`hammerspoon/overlay-all.lua` 를 `~/.hammerspoon/` 에 두고 패널 모듈들을 시작한 **뒤에**
+`require("overlay-all").start()` 를 부릅니다.
+
+| 동작 | 방법 |
+|---|---|
+| 모두 숨김 ↔ 되살림 | `hyper+h`, `hammerspoon://overlays-toggle` |
+| 모두 숨김 | `hammerspoon://overlays-hide` |
+| 모두 표시 | `hammerspoon://overlays-show` |
+
+숨길 때 보이던 패널만 기억했다가 되살릴 때 그 패널만 다시 띄우므로, 따로 숨겨 둔 패널은 그대로
+숨겨져 있습니다. 각 패널은 `isVisible` · `hide`/`hideOverlay` · `show`/`showOverlay` 를 제공해야 하며,
+`package.loaded` 에 없는 모듈은 건너뜁니다.
 
 ## 서버가 없을 때
 
