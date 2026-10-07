@@ -1,6 +1,6 @@
 [package]
 name = "diskmeter"
-version = "2026.10.1"
+version = "2026.10.2"
 edition = "2024"
 description = "디스크 사용량을 5분·1시간·1일 해상도로 기록하고 터미널·웹·Hammerspoon 에서 보여주는 CLI"
 license = "MIT"

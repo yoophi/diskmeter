@@ -38,7 +38,7 @@ brew install yoophi/tap/diskmeter
 brew upgrade diskmeter
 ```
 
-cargo 로 직접 받으려면 `cargo install --git https://github.com/yoophi/diskmeter --tag 2026.10.1`,
+cargo 로 직접 받으려면 `cargo install --git https://github.com/yoophi/diskmeter --tag 2026.10.2`,
 체크아웃한 작업 트리에서는 `cargo install --path .` 입니다.
 
 ### 명령
