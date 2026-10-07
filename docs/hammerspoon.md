@@ -28,10 +28,10 @@ Agent Cockpit 아래 → Agent Shortcuts 아래 → 주 화면 우상단 순으�
 |---|---|
 | 표시 / 숨김 | `hyper+d`, `hammerspoon://diskmeter-toggle` |
 | 즉시 새로고침 | `hyper+shift+d`, `hammerspoon://diskmeter-refresh` |
-| 기간 전환 | 헤더의 `24h ▸` 클릭 (24h → 7d → 30d → 1y), `hammerspoon://diskmeter-range?range=7d` |
+| 기간 묶음 전환 | 헤더의 `24h·7d ▸` 클릭 (24h·7d → 30d·1y), `hammerspoon://diskmeter-range?range=24h,7d` 로 임의 목록 |
 | 위치 | 헤더 드래그, `hammerspoon://diskmeter-move?x=100&y=200` (파라미터 없으면 기본 위치) |
 
-고른 기간은 `hs.settings` 에 남아 재시작해도 유지됩니다.
+기본은 24h 와 7d 두 차트를 위아래로 함께 그립니다. 고른 기간 목록은 `hs.settings` 에 남아 재시작해도 유지됩니다.
 
 `hyper+0` 은 Agent Shortcuts 의 오버레이 토글이 이미 쓰고 있어 피했습니다. 새 키를 고를 때는
 `require("hyper").hyperMode.keys` 의 `idx` 목록을 보면 모달에 등록된 키를 전부 알 수 있습니다 —
@@ -88,8 +88,10 @@ Terminal 새 창에서 바로 실행합니다. 20초마다 다시 접속을 시�
 
 ## 그리는 것
 
-pane 마다 경로와 `83% used`(심각도 색), 게이지, 차트, `408.3 GB of 494.4 GB · 86.1 GB free`,
-기간과 변화량(`24h  +0.4%p`)을 그립니다. 차트는 서버가 계산한 좌표를 그대로 씁니다.
+pane 마다 경로와 `83% used`(심각도 색), 게이지, 기간마다 제목 줄(`24h` 와 변화량 `+0.4%p`)과 차트,
+마지막에 `408.3 GB of 494.4 GB · 86.1 GB free` 와 표본 시각을 그립니다. 기간마다 `/api/dashboard?range=`
+를 따로 받아 전부 모이면 한 번에 그리고, 받는 도중 다시 새로고침되면 먼저 간 응답은 버립니다.
+차트는 서버가 계산한 좌표를 그대로 씁니다.
 
 - `y_ticks` → 가로 격자와 왼쪽 눈금
 - `markers` → 세로 점선. `midnight` · `week` · `month` 는 진하게, `hour` · `day` 는 연하게. 라벨은 아래에
@@ -107,12 +109,13 @@ pane 마다 경로와 `83% used`(심각도 색), 게이지, 차트, `408.3 GB of
 |---|---|---|
 | `url` | `http://localhost:9998/api/dashboard` | 데이터 주소 (`?range=` 는 패널이 붙입니다) |
 | `startCommand` | `diskmeter web --port 9998` | 오프라인일 때 보여 주고 실행할 명령 |
-| `range` | `24h` | 시작 기간 |
+| `ranges` | `{ "24h", "7d" }` | 함께 그릴 기간 목록 |
+| `rangeSets` | `{ {24h, 7d}, {30d, 1y} }` | 헤더 클릭으로 순환하는 묶음 |
 | `pollSec` | 60 | `next_refresh_at` 을 읽지 못했을 때의 주기 |
 | `retrySec` | 20 | 접속 실패 시 재시도 주기 |
 | `showOnStart` | `true` | 시작할 때 보일지 |
 | `offsetY` | 980 | 다른 패널이 없을 때 주 화면 우상단에서 내려올 거리 |
-| `chartHeight` | 56 | 차트 높이 (px) |
+| `chartHeight` | 44 | 차트 하나의 높이 (px) |
 
 ## 디버깅
 

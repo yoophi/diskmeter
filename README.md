@@ -127,10 +127,10 @@ Agent Meter 패널과 같은 `overlay-style.lua` · `hyper.lua` 를 쓰므로 �
 require("disk-meter").start()
 ```
 
-- `hyper+d` 표시/숨김, `hyper+shift+d` 즉시 새로고침, 헤더의 `24h ▸` 를 클릭하면 기간이 순환합니다.
+- 볼륨마다 24h 와 7d 차트를 위아래로 함께 보여 줍니다. `hyper+d` 표시/숨김, `hyper+shift+d` 즉시 새로고침, 헤더의 `24h·7d ▸` 를 클릭하면 30d·1y 묶음으로 바뀝니다.
 - `hammerspoon/overlay-all.lua` 를 함께 두면 `hyper+h` 로 Agent Shortcuts · Cockpit · Meter · Disk Meter 패널을 한 번에 숨기고 되살립니다.
 - `hammerspoon/overlay-layout.lua` 를 함께 두면 패널들이 같은 폭 · 같은 간격으로 주 화면 우측 하단부터 위로 쌓이고, 높이가 바뀌면 위 패널이 따라 올라갑니다. 드래그한 패널은 고정되고, `hyper+t` 는 손으로 놓은 배치를 유지한 채 격자에 맞추며, `hyper+shift+h` 는 정해진 순서로 다시 쌓습니다.
-- `hammerspoon://diskmeter-toggle` · `diskmeter-refresh` · `diskmeter-range?range=7d` · `diskmeter-move?x=&y=`
+- `hammerspoon://diskmeter-toggle` · `diskmeter-refresh` · `diskmeter-range?range=24h,7d` · `diskmeter-move?x=&y=`
 - `diskmeter web --port 9998` 이 떠 있지 않으면 명령 복사 · 터미널 실행 버튼을 보여 줍니다.
 
 자세한 내용은 [docs/hammerspoon.md](docs/hammerspoon.md).
