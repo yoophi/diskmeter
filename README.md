@@ -118,6 +118,12 @@ diskmeter web -n 60                # 60초마다 표본 (기본 300초, 최소 1
 띄웁니다. 두 화면은 하나의 세션을 공유하므로 표본은 한 번만 뜹니다. 출력이 터미널이 아니면
 주소만 출력하고 서버만 남습니다. 자세한 내용은 [docs/web-dashboard.md](docs/web-dashboard.md).
 
+### Stream Deck
+
+9998 포트의 웹 대시보드 API를 이용해 루트 디스크 사용률을 Stream Deck 키에 표시합니다.
+30초마다 갱신하며, 키를 누르면 대시보드가 열립니다. 독립 플러그인의 설치·검증 방법은
+[integrations/streamdeck/README.md](integrations/streamdeck/README.md)를 보세요.
+
 ### Hammerspoon 패널
 
 `hammerspoon/disk-meter.lua` 를 `~/.hammerspoon/` 에 두고 `init.lua` 에 한 줄을 더합니다.

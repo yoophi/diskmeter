@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.yoophi.diskmeter",
+  "Name": "DiskMeter",
+  "Description": "Root disk usage from your local DiskMeter dashboard.",
+  "Author": "yoophi",
+  "Version": "2026.10.1.0",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "7.6"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "13"
+    }
+  ],
+  "Nodejs": {
+    "Version": "24"
+  },
+  "CodePath": "plugin.mjs",
+  "Icon": "images/plugin",
+  "Category": "DiskMeter",
+  "CategoryIcon": "images/action",
+  "Actions": [
+    {
+      "UUID": "com.yoophi.diskmeter.usage",
+      "Name": "DiskMeter Usage",
+      "Tooltip": "Root disk usage \u00b7 updates every 30 seconds \u00b7 press to open DiskMeter",
+      "Icon": "images/action",
+      "Controllers": [
+        "Keypad"
+      ],
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "images/key",
+          "ShowTitle": false
+        }
+      ]
+    }
+  ]
+}
